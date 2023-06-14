@@ -1,0 +1,56 @@
+# NB: this suppose that a docker postgis container
+# is running on the host, and that its gateway
+# is 172.17.0.1
+apiVersion: v1
+data:
+  jndi.yml: |+
+    jndi:
+      datasources:
+        acldb:
+          enabled: true
+          wait-for-it: true
+          wait-timeout: 10
+          url: jdbc:postgresql://172.17.0.1:5432/acl
+          username: username
+          password: password
+          maximum-pool-size: 10
+          minimum-idle: 2
+          connection-timeout: 250
+          idle-timeout: 60000
+  acl.yml: |+
+    spring.config.import:
+    - jndi.yml
+
+    jndi.acldb.enabled: true
+    acl.db.jndiName: java:comp/env/jdbc/acldb
+    acl.db.schema: acl
+
+    geoserver.acl.security:
+    internal:
+        enabled: true
+        users:
+        admin:
+            enabled: true
+            admin: true
+            # password is a bcrypt encoded value for s3cr3t
+            password: "${acl.admin.password:{bcrypt}$2a$10$FE62N3ejbKm56EX5VrtSQeDDka8YjwgjwF9sSEKbatGZuZ8e7S9v.}"
+            #for a plain-text password (e.g. coming from a docker or kubernetes secret,
+            # use the {noop} prefix, as in: password: "{noop}plaintextpwd}", or password: "{noop}${ACL_ADMIN_PASSWORD}"
+        user:
+            enabled: true
+            admin: false
+            # password is a bcrypt encoded value for s3cr3t
+            password: "{bcrypt}$2a$10$eMyaZRLZBAZdor8nOX.qwuwOyWazXjR2hddGLCT6f6c382WiwdQGG"
+
+    logging:
+    level:
+        root: warn
+        org.geoserver.acl: info
+        org.geoserver.cloud.config: info
+        org.springframework.jdbc.support: info
+        org.springframework.security: debug
+
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: cm-jndi-acl

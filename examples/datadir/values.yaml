@@ -34,12 +34,34 @@ env: &env-override
     value: "/mnt/cache"
   JAVA_OPTS:
     value: "$(JAVA_OPTS_DEFAULT) -Dspring.config.additional-location=optional:file:/custom/geodata/jndi.yml"
+  SERVICE_ACL_NAME:
+    type: "configMap"
+    name: self
+    key: SERVICE_ACL_NAME
+  TARGETS_ACL:
+    order: 1
+    value: "http://$(SERVICE_ACL_NAME):8080"
+  GEOSERVER_ACL_ENABLED:
+    value: "true"
+  GEOSERVER_ACL_CLIENT_BASEPATH:
+    order: 1
+    value: "http://$(SERVICE_ACL_NAME):8080/acl/api"
+  GEOSERVER_ACL_CLIENT_USERNAME:
+    value: "admin"
+  GEOSERVER_ACL_CLIENT_PASSWORD:
+    value: "s3cr3t"
+  GEOSERVER_ACL_CLIENT_DEBUG:
+    value: "false"
+  GEOSERVER_WEB_UI_ACL_ENABLED:
+    value: "true"
 
 additional-stuff: &additional-stuff
   volumes:
     <<: *additional-volumes
   containers:
     spring:
+      image:
+        tag: "1.1.0"
       env:
         <<: *env-override
       volumeMounts:
@@ -66,6 +88,77 @@ geoservercloud:
           hosts:
             - gscloud.local
     services:
+      acl:
+        enabled: true
+        ingress:
+          enabled: false
+        template: true
+        replicaCount: 1
+        nameOverride: "gsc"
+        releaseTrunc: 45
+        prefixTrunc: 51
+        initContainers: {}
+        nodeSelector: {}
+        affinity: {}
+        service:
+          type: ClusterIP
+          servicePort: 8080
+          ports:
+            - name: http
+              port: 8080
+              protocol: TCP
+              targetPort: http
+        volumes:
+          jndi:
+            configMap:
+              name: cm-jndi-acl
+          # this comes from the config initContainer
+          vol-local-gscloud:
+            emptyDir: {}
+          # /tmp as emptyDir, required if running with readOnlyRootFilesystem=true
+          tmp-empty-dir:
+            emptyDir: {}
+        containers:
+          spring:
+            resources:
+              requests:
+                memory: 512Mi
+                cpu: 0.1
+              limits:
+                memory: 4Gi
+                cpu: 4.0
+            ports:
+              http:
+                containerPort: 8080
+                hostIP: 127.0.0.1
+            volumeMounts:
+              /opt/app/bin/:
+                name: "jndi"
+                readOnly: true
+              /etc/localconfig:
+                name: vol-local-gscloud
+              # /tmp as emptyDir, required if running with readOnlyRootFilesystem=true
+              /tmp/:
+                name: "tmp-empty-dir"
+            env:
+              JAVA_OPTS:
+                value: '--XX:MaxRAMPercentage=80 -XX:InitialRAMPercentage=80'
+            livenessProbe:
+              httpGet:
+                path: /actuator/health/liveness
+                port: http
+              periodSeconds: 10
+              failureThreshold: 10
+              initialDelaySeconds: 30
+            readinessProbe:
+              httpGet:
+                path: /actuator/health/readiness
+                port: http
+              periodSeconds: 5
+            image:
+              tag: "1.0.0"
+              repository: geoservercloud/geoserver-acl
+              sha: ''
       gateway:
         service:
           annotations:
