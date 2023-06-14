@@ -149,14 +149,14 @@ geoservercloud:
                 value: "file:/opt/config/acl.yml"
             livenessProbe:
               httpGet:
-                path: /actuator/health/liveness
+                path: /acl/actuator/health/liveness
                 port: http
               periodSeconds: 10
               failureThreshold: 10
               initialDelaySeconds: 30
             readinessProbe:
               httpGet:
-                path: /actuator/health/readiness
+                path: /acl/actuator/health/readiness
                 port: http
               periodSeconds: 5
             image:
