@@ -164,6 +164,25 @@ geoservercloud:
               repository: geoservercloud/geoserver-acl
               sha: ''
       gateway:
+        volumes:
+          gateway:
+            configMap:
+              name: cm-gateway-spring
+        containers:
+          spring:
+            env:
+              SPRING_CONFIG_LOCATION:
+                value: /opt/config/gateway-service.yml
+              SPRING_PROFILES_ACTIVE:
+                value: "authgoogle,authgithub"
+              # add other things
+            image:
+              tag: "8b7a25b9"
+              repository: "groldan/georchestra-gateway"
+              sha: ''
+            volumeMounts:
+              /opt/config:
+                name: gateway
         service:
           annotations:
             my-custom-annotation: 'hello'
