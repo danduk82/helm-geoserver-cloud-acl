@@ -120,6 +120,10 @@ geoservercloud:
             emptyDir: {}
         containers:
           spring:
+            # command:
+            #   - /bin/bash
+            #   - -c
+            #   - "sleep infinity"
             resources:
               requests:
                 memory: 512Mi
@@ -132,7 +136,7 @@ geoservercloud:
                 containerPort: 8080
                 hostIP: 127.0.0.1
             volumeMounts:
-              /opt/app/bin/:
+              /opt/config:
                 name: "jndi"
                 readOnly: true
               /etc/localconfig:
@@ -141,8 +145,8 @@ geoservercloud:
               /tmp/:
                 name: "tmp-empty-dir"
             env:
-              JAVA_OPTS:
-                value: '--XX:MaxRAMPercentage=80 -XX:InitialRAMPercentage=80'
+              SPRING_CONFIG_ADDITIONAL_LOCATION:
+                value: "file:/opt/config/acl.yml"
             livenessProbe:
               httpGet:
                 path: /actuator/health/liveness
